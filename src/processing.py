@@ -4,7 +4,6 @@ import torch
 import os
 from functools import lru_cache
 
-# On utilise le modèle FinBERT de ProsusAI (référence en finance)
 MODEL_NAME = "ProsusAI/finbert"
 
 @lru_cache(maxsize=1)

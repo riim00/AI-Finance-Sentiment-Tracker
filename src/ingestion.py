@@ -96,7 +96,5 @@ def fetch_news(ticker, force_refresh=False):
 
 if __name__ == "__main__":
     ticker_symbol = "NVDA"
-    # Étape 1 : Prix
     fetch_stock_data(ticker_symbol)
-    # Étape 2 : News
     fetch_news(ticker_symbol)

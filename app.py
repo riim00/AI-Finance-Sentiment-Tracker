@@ -111,7 +111,6 @@ def compute_rolling_correlation(prices_df, sentiment_df, window=14):
     return merged
 
 
-# ─── SIDEBAR ────────────────────────────────────────────────────────────────
 st.sidebar.header("⚙️ Configuration")
 
 available_tickers = [
@@ -137,7 +136,6 @@ selected_ticker = st.sidebar.selectbox(
 
 custom_ticker = st.sidebar.text_input("Ou saisir un ticker personnalisé", value="")
 
-# Session state init
 if "favorites" not in st.session_state:
     st.session_state.favorites = []
 if "ticker_override" not in st.session_state:
@@ -152,7 +150,6 @@ elif st.session_state.ticker_override:
 else:
     ticker = selected_ticker if selected_ticker else "NVDA"
 
-# Validate custom ticker
 if custom_ticker.strip():
     is_valid, suggestions = validate_ticker(ticker)
     if not is_valid:
@@ -161,7 +158,6 @@ if custom_ticker.strip():
         )
         ticker = selected_ticker if selected_ticker else "NVDA"
 
-# Favorites
 if st.sidebar.button("⭐ Ajouter aux favoris", key="add_fav"):
     if ticker not in st.session_state.favorites:
         st.session_state.favorites.append(ticker)
@@ -207,11 +203,9 @@ show_volume = st.sidebar.checkbox("Volume", help="Volume journalier des échange
 
 run_button = st.sidebar.button("Lancer l'analyse IA", type="primary")
 
-# ─── HEADER ─────────────────────────────────────────────────────────────────
 st.title(f"📈 AI Finance Sentiment Tracker : {ticker}")
 st.write(f"Analyse en temps réel pour **{ticker}** — Modèle : **FinBERT** (NLP financier)")
 
-# ─── ANALYSIS ───────────────────────────────────────────────────────────────
 if run_button:
     with st.spinner(f"Analyse en cours pour {ticker}…"):
         fetch_stock_data(ticker, start=str(start_date), force_refresh=force_refresh)
@@ -221,7 +215,6 @@ if run_button:
         load_sentiment_data.clear()
         st.sidebar.success("Analyse terminée !")
 
-# ─── RESULTS ────────────────────────────────────────────────────────────────
 try:
     price_path = f"data/{ticker}_prices.csv"
     sent_path = f"data/{ticker}_sentiment.csv"
@@ -230,17 +223,14 @@ try:
         prices = load_price_data(price_path)
         raw_sentiment = load_sentiment_data(sent_path)
 
-        # Filter sentiment
         if sentiment_filter != "Tous":
             sentiment = raw_sentiment[raw_sentiment["sentiment"] == sentiment_filter].copy()
         else:
             sentiment = raw_sentiment.copy()
 
-        # Filter prices by date range
         prices = prices.sort_index()
         prices_range = prices.loc[str(start_date) : str(end_date)]
 
-        # Filter sentiment by date range
         if "publishedAt" in sentiment.columns:
             sentiment["publishedAt"] = pd.to_datetime(sentiment["publishedAt"], errors="coerce")
             mask = (sentiment["publishedAt"] >= pd.to_datetime(start_date)) & (
@@ -248,7 +238,6 @@ try:
             )
             sentiment = sentiment[mask].copy()
 
-        # ── AI SIGNAL ────────────────────────────────────────────────────────
         if not prices.empty and not raw_sentiment.empty:
             signal_label, signal_reason, signal_color = compute_ai_signal(raw_sentiment, prices)
             st.markdown(
@@ -261,7 +250,6 @@ try:
                 unsafe_allow_html=True,
             )
 
-        # ── SUMMARY METRICS ──────────────────────────────────────────────────
         counts = raw_sentiment["sentiment"].value_counts().to_dict()
         st.subheader("Synthèse du sentiment")
         m1, m2, m3, m4 = st.columns(4)
@@ -270,7 +258,6 @@ try:
         m3.metric("Neutre", counts.get("neutral", 0))
         m4.metric("Négatif", counts.get("negative", 0))
 
-        # ── PRICE CHART ──────────────────────────────────────────────────────
         st.subheader(f"Évolution du cours : {ticker}")
         data_for_chart = (prices_range if not prices_range.empty else prices).copy()
 
@@ -293,7 +280,6 @@ try:
             data_for_chart["MACD_signal"] = macd_sig
             data_for_chart["MACD_hist"] = macd_hist
 
-        # Build subplot layout dynamically
         sub_panels = []
         if show_rsi:
             sub_panels.append("RSI (14)")
@@ -357,7 +343,6 @@ try:
                 row=1, col=1,
             )
 
-        # Add RSI and MACD to their respective sub-panels
         current_row = 2
         if show_rsi:
             fig.add_trace(
@@ -403,7 +388,6 @@ try:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # Volume chart
         if show_volume and "Volume" in data_for_chart.columns:
             st.subheader("Volume des échanges")
             vol = pd.to_numeric(data_for_chart["Volume"], errors="coerce")
@@ -417,7 +401,6 @@ try:
         if prices_range.empty:
             st.warning("Aucune donnée de prix disponible pour la plage sélectionnée.")
 
-        # ── SENTIMENT ────────────────────────────────────────────────────────
         if sentiment.empty:
             st.warning("Aucun article ne correspond au filtre. Changez le filtre ou relancez l'analyse.")
         else:
@@ -456,7 +439,6 @@ try:
                     key="news_table",
                 )
 
-            # Export button
             csv_export = sentiment.to_csv(index=False).encode("utf-8")
             st.download_button(
                 label="📥 Exporter les données de sentiment (CSV)",
@@ -465,7 +447,6 @@ try:
                 mime="text/csv",
             )
 
-            # Top news
             top_positive = sentiment.nlargest(3, "positive")[["title", "positive", "negative", "score"]]
             top_negative = sentiment.nlargest(3, "negative")[["title", "positive", "negative", "score"]]
             st.subheader("Actualités clés")
@@ -477,7 +458,6 @@ try:
                 st.markdown("**Top 3 négatifs**")
                 st.dataframe(top_negative, use_container_width=True, hide_index=True)
 
-            # Sentiment over time
             if "publishedAt" in sentiment.columns:
                 sentiment_time = sentiment.dropna(subset=["publishedAt"]).copy()
                 if not sentiment_time.empty:
@@ -505,7 +485,6 @@ try:
                     )
                     st.plotly_chart(fig_news_vol, use_container_width=True)
 
-            # ── ROLLING CORRELATION ──────────────────────────────────────────
             st.subheader("Corrélation Sentiment & Rendements (rolling 14j)")
             rolling_corr = compute_rolling_correlation(prices, raw_sentiment)
             if rolling_corr is not None and not rolling_corr["rolling_corr"].dropna().empty:
