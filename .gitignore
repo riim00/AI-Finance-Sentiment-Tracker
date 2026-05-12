@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+
+# Données (On ne commit pas les datasets lourds)
+data/*.csv
+data/*.json
+
+# Environnement
+.env
+.vscode/
